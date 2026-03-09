@@ -1,0 +1,95 @@
+<div class="p-8">
+  <!-- Page Header -->
+  <div class="mb-8">
+    <h2 class="text-2xl font-bold text-gray-900">Dashboard</h2>
+    <p class="text-sm text-gray-500 mt-1">Overview of the Legislative Document Management System</p>
+  </div>
+
+  <!-- Stat Cards -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+    <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-5">
+      <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Total Documents</p>
+      <p class="mt-2 text-3xl font-bold text-gray-900">{{ totalDocuments() }}</p>
+      <p class="mt-1 text-xs text-gray-400">All records in the system</p>
+    </div>
+    <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-5">
+      <p class="text-xs font-medium text-yellow-600 uppercase tracking-wide">Pending Review</p>
+      <p class="mt-2 text-3xl font-bold text-yellow-700">{{ pendingReview() }}</p>
+      <p class="mt-1 text-xs text-gray-400">Awaiting committee or reading</p>
+    </div>
+    <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-5">
+      <p class="text-xs font-medium text-blue-600 uppercase tracking-wide">Active Sessions</p>
+      <p class="mt-2 text-3xl font-bold text-blue-700">{{ activeSessions() }}</p>
+      <p class="mt-1 text-xs text-gray-400">Scheduled or ongoing</p>
+    </div>
+    <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-5">
+      <p class="text-xs font-medium text-purple-600 uppercase tracking-wide">Open FOI Requests</p>
+      <p class="mt-2 text-3xl font-bold text-purple-700">{{ openFoi() }}</p>
+      <p class="mt-1 text-xs text-gray-400">Awaiting response</p>
+    </div>
+  </div>
+
+  <!-- Quick Actions -->
+  <div class="mb-8">
+    <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">Quick Actions</h3>
+    <div class="flex flex-wrap gap-3">
+      <a
+        routerLink="/app/documents/new"
+        class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+      >
+        + New Document
+      </a>
+      <a
+        routerLink="/app/sessions/new"
+        class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+      >
+        + New Session
+      </a>
+      <a
+        routerLink="/app/foi/new"
+        class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+      >
+        + Submit FOI Request
+      </a>
+    </div>
+  </div>
+
+  <!-- Recent Documents -->
+  <div class="bg-white rounded-lg border border-gray-200 shadow-sm">
+    <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+      <h3 class="text-sm font-semibold text-gray-900">Recent Documents</h3>
+      <a routerLink="/app/documents" class="text-xs text-blue-600 hover:underline">View all</a>
+    </div>
+
+    @if (recentDocuments().length === 0) {
+      <div class="px-6 py-10 text-center text-sm text-gray-400">
+        No documents yet.
+        <a routerLink="/app/documents/new" class="text-blue-600 hover:underline"
+          >Create the first one.</a
+        >
+      </div>
+    } @else {
+      <div class="divide-y divide-gray-100">
+        @for (doc of recentDocuments(); track doc.documentId) {
+          <a
+            [routerLink]="['/app/documents', doc.documentId]"
+            class="flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition-colors"
+          >
+            <div class="min-w-0">
+              <p class="text-sm font-medium text-gray-900 truncate">{{ doc.title }}</p>
+              <p class="text-xs text-gray-500 mt-0.5">
+                {{ doc.barcodeId }} · {{ formatDate(doc.createdAt) }}
+              </p>
+            </div>
+            <span
+              class="ml-4 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium flex-shrink-0"
+              [class]="getStatusBadgeClass(doc.status)"
+            >
+              {{ formatStatus(doc.status) }}
+            </span>
+          </a>
+        }
+      </div>
+    }
+  </div>
+</div>

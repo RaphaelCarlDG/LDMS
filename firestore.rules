@@ -1,0 +1,189 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function hasRole(role) {
+      return isAuthenticated() && userDoc().role == role;
+    }
+
+    function hasAnyRole(roles) {
+      return isAuthenticated() && userDoc().role in roles;
+    }
+
+    function hasPermission(perm) {
+      return isAuthenticated() && userDoc().permissions[perm] == true;
+    }
+
+    function isActive() {
+      return isAuthenticated() && userDoc().isActive == true;
+    }
+
+    function isOwner(uid) {
+      return isAuthenticated() && request.auth.uid == uid;
+    }
+
+    // ── Users ─────────────────────────────────────────────────────────────────
+    match /users/{userId} {
+      // Self-registration: allow a newly authenticated user to create their own profile doc.
+      // For reading, a user can always read their own doc; admins can list all.
+      allow read: if isAuthenticated() && (isOwner(userId) || (isActive() && hasPermission('canManageUsers')));
+      allow create: if isAuthenticated() && isOwner(userId);
+      allow update: if (
+        isOwner(userId)
+        && !request.resource.data.diff(resource.data).affectedKeys()
+            .hasAny(['role', 'permissions', 'isActive', '_displayName'])
+      ) || hasPermission('canManageUsers');
+      allow delete: if false; // soft-delete only
+    }
+
+    // ── Documents ─────────────────────────────────────────────────────────────
+    match /documents/{docId} {
+      allow read: if isActive();
+      allow create: if isActive()
+        && hasAnyRole(['secretariat', 'council_member', 'super_admin']);
+      allow update: if isActive()
+        && !request.resource.data.diff(resource.data).affectedKeys()
+            .hasAny(['fileStoragePath', 'checksum', 'currentVersion', '_searchTokens'])
+        && hasAnyRole(['secretariat', 'council_member', 'super_admin']);
+      allow delete: if false; // soft-delete only
+
+      // Versions — Cloud Functions only
+      match /versions/{versionId} {
+        allow read: if isActive();
+        allow write: if false;
+      }
+
+      // Annotations — scoped by visibility
+      match /annotations/{annotationId} {
+        allow read: if isActive() && (
+          resource.data.scope == 'public'
+          || resource.data.authorId == request.auth.uid
+          || (resource.data.scope == 'committee'
+              && resource.data.committeeId in userDoc().committeeIds)
+        );
+        allow create: if isActive();
+        allow update: if isOwner(resource.data.authorId);
+        allow delete: if false; // soft-delete only — use isResolved: true
+      }
+
+      // Referrals
+      match /referrals/{referralId} {
+        allow read: if isActive();
+        allow create: if isActive()
+          && hasAnyRole(['secretariat', 'super_admin']);
+        allow update: if isActive() && (
+          hasAnyRole(['secretariat', 'super_admin'])
+          || (hasRole('committee_chair')
+              && resource.data.toCommitteeId in userDoc().committeeIds)
+        );
+        allow delete: if false;
+      }
+    }
+
+    // ── Committees ────────────────────────────────────────────────────────────
+    match /committees/{committeeId} {
+      allow read: if isActive();
+      allow create: if isActive() && hasAnyRole(['secretariat', 'super_admin']);
+      allow update: if isActive() && (
+        hasAnyRole(['secretariat', 'super_admin'])
+        || (hasRole('committee_chair')
+            && committeeId in userDoc().committeeIds)
+      );
+      allow delete: if false;
+
+      match /members/{userId} {
+        allow read: if isActive();
+        allow write: if isActive()
+          && hasAnyRole(['secretariat', 'super_admin', 'committee_chair']);
+      }
+    }
+
+    // ── Sessions ──────────────────────────────────────────────────────────────
+    match /sessions/{sessionId} {
+      allow read: if isActive();
+      allow create: if isActive()
+        && hasAnyRole(['secretariat', 'super_admin']);
+      allow update: if isActive() && (
+        hasAnyRole(['secretariat', 'super_admin'])
+        || (hasRole('committee_chair')
+            && resource.data.committeeId in userDoc().committeeIds)
+      );
+      allow delete: if false;
+
+      match /agendaItems/{itemId} {
+        allow read: if isActive();
+        allow write: if isActive()
+          && hasAnyRole(['secretariat', 'super_admin']);
+      }
+    }
+
+    // ── FOI Requests ─────────────────────────────────────────────────────────
+    match /foiRequests/{requestId} {
+      allow create: if true; // public submission, no auth required
+      allow read: if isActive() && (
+        hasPermission('canExportFOI')
+        || resource.data.assignedOfficerId == request.auth.uid
+      );
+      allow update: if isActive() && hasPermission('canExportFOI');
+      allow delete: if false;
+    }
+
+    // ── Vaults ────────────────────────────────────────────────────────────────
+    match /vaults/{vaultId} {
+      allow read: if isActive();
+      allow create, update: if hasPermission('canManageRetention');
+      allow delete: if false; // soft-delete only
+    }
+
+    // ── Retention Policies ────────────────────────────────────────────────────
+    match /retentionPolicies/{policyId} {
+      allow read: if isActive();
+      allow write: if hasRole('super_admin');
+    }
+
+    // ── AI Jobs ───────────────────────────────────────────────────────────────
+    match /aiJobs/{jobId} {
+      allow read: if isActive()
+        && hasAnyRole(['secretariat', 'super_admin']);
+      allow write: if false; // Cloud Functions only
+    }
+
+    // ── Notifications ─────────────────────────────────────────────────────────
+    match /notifications/{notificationId} {
+      allow read: if isAuthenticated()
+        && resource.data.recipientId == request.auth.uid;
+      allow update: if isAuthenticated()
+        && resource.data.recipientId == request.auth.uid
+        // Only allow marking as read
+        && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['isRead', 'readAt']);
+      allow create: if false; // Cloud Functions only
+      allow delete: if false;
+    }
+
+    // ── Audit Logs (date-sharded, e.g. auditLogs_2024_01) ────────────────────
+    // Firestore rules cannot embed variables in collection name literals,
+    // so we use a wildcard segment and filter by name pattern at query time.
+    match /{auditCollection}/{logId} {
+      allow read: if auditCollection.matches('auditLogs_[0-9]{4}_[0-9]{2}')
+        && hasPermission('canViewAuditLogs');
+      allow write: if false; // Cloud Functions only
+    }
+
+    // ── Unique Identifiers (barcode/QR reservation) ───────────────────────────
+    match /uniqueIdentifiers/{id} {
+      allow read: if isActive();
+      allow write: if false; // Cloud Functions only
+    }
+  }
+}

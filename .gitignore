@@ -42,3 +42,26 @@ __screenshots__/
 # System files
 .DS_Store
 Thumbs.db
+
+# Firebase environment files — contain live API keys, never commit
+src/environments/environment.ts
+src/environments/environment.prod.ts
+src/environments/environment.development.ts
+src/environments/environment.staging.ts
+
+# Service account keys and credential files — never commit
+serviceAccountKey.json
+firebase-adminsdk-*.json
+*-service-account.json
+*.serviceaccount.json
+gcloud-*.json
+
+# Environment variable files
+.env
+.env.*
+*.env
+
+# Internal Claude Code operational files
+.claude/
+CLAUDE.md
+MVP-CHECKLIST.md

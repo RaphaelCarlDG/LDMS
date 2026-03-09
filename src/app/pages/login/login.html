@@ -1,0 +1,165 @@
+<div class="min-h-screen flex items-center justify-center bg-gray-50">
+  <div class="w-full max-w-md bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
+    <!-- Header -->
+    @if (mode() === 'login') {
+      <h1 class="text-2xl font-semibold text-gray-900 mb-1">Welcome back</h1>
+      <p class="text-sm text-gray-500 mb-6">Sign in to your account to continue.</p>
+    } @else {
+      <h1 class="text-2xl font-semibold text-gray-900 mb-1">Create an account</h1>
+      <p class="text-sm text-gray-500 mb-6">Fill in the details below to get started.</p>
+    }
+
+    <!-- Sign In Form -->
+    @if (mode() === 'login') {
+      <form [formGroup]="loginForm" (ngSubmit)="submit()" novalidate class="space-y-4">
+        <div>
+          <label for="login-email" class="block text-sm font-medium text-gray-700 mb-1"
+            >Email</label
+          >
+          <input
+            id="login-email"
+            type="email"
+            formControlName="email"
+            placeholder="you@example.com"
+            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+          @if (loginForm.get('email')?.invalid && loginForm.get('email')?.touched) {
+            <p class="mt-1 text-xs text-red-500">Enter a valid email address.</p>
+          }
+        </div>
+
+        <div>
+          <label for="login-password" class="block text-sm font-medium text-gray-700 mb-1"
+            >Password</label
+          >
+          <input
+            id="login-password"
+            type="password"
+            formControlName="password"
+            placeholder="••••••••"
+            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+          @if (loginForm.get('password')?.invalid && loginForm.get('password')?.touched) {
+            <p class="mt-1 text-xs text-red-500">Password is required.</p>
+          }
+        </div>
+
+        @if (error()) {
+          <p class="text-sm text-red-500">{{ error() }}</p>
+        }
+
+        <button
+          type="submit"
+          class="w-full bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-sm font-medium py-2 rounded-lg transition-colors"
+        >
+          Sign in
+        </button>
+      </form>
+    }
+
+    <!-- Sign Up Form -->
+    @if (mode() === 'signup') {
+      <form [formGroup]="signupForm" (ngSubmit)="submit()" novalidate class="space-y-4">
+        <div>
+          <label for="signup-name" class="block text-sm font-medium text-gray-700 mb-1"
+            >Full name</label
+          >
+          <input
+            id="signup-name"
+            type="text"
+            formControlName="name"
+            placeholder="John Doe"
+            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+          @if (signupForm.get('name')?.invalid && signupForm.get('name')?.touched) {
+            <p class="mt-1 text-xs text-red-500">Full name is required.</p>
+          }
+        </div>
+
+        <div>
+          <label for="signup-email" class="block text-sm font-medium text-gray-700 mb-1"
+            >Email</label
+          >
+          <input
+            id="signup-email"
+            type="email"
+            formControlName="email"
+            placeholder="you@example.com"
+            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+          @if (signupForm.get('email')?.invalid && signupForm.get('email')?.touched) {
+            <p class="mt-1 text-xs text-red-500">Enter a valid email address.</p>
+          }
+        </div>
+
+        <div>
+          <label for="signup-password" class="block text-sm font-medium text-gray-700 mb-1"
+            >Password</label
+          >
+          <input
+            id="signup-password"
+            type="password"
+            formControlName="password"
+            placeholder="••••••••"
+            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+          @if (signupForm.get('password')?.invalid && signupForm.get('password')?.touched) {
+            <p class="mt-1 text-xs text-red-500">Password must be at least 6 characters.</p>
+          }
+        </div>
+
+        <div>
+          <label for="signup-confirm" class="block text-sm font-medium text-gray-700 mb-1"
+            >Confirm password</label
+          >
+          <input
+            id="signup-confirm"
+            type="password"
+            formControlName="confirmPassword"
+            placeholder="••••••••"
+            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+          @if (
+            signupForm.get('confirmPassword')?.touched && signupForm.hasError('passwordMismatch')
+          ) {
+            <p class="mt-1 text-xs text-red-500">Passwords do not match.</p>
+          }
+        </div>
+
+        @if (error()) {
+          <p class="text-sm text-red-500">{{ error() }}</p>
+        }
+
+        <button
+          type="submit"
+          class="w-full bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-sm font-medium py-2 rounded-lg transition-colors"
+        >
+          Create account
+        </button>
+      </form>
+    }
+
+    <!-- Mode toggle -->
+    <p class="mt-6 text-center text-sm text-gray-500">
+      @if (mode() === 'login') {
+        Don't have an account?
+        <button
+          type="button"
+          (click)="switchMode('signup')"
+          class="text-blue-600 hover:underline font-medium"
+        >
+          Sign up
+        </button>
+      } @else {
+        Already have an account?
+        <button
+          type="button"
+          (click)="switchMode('login')"
+          class="text-blue-600 hover:underline font-medium"
+        >
+          Sign in
+        </button>
+      }
+    </p>
+  </div>
+</div>

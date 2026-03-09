@@ -1,0 +1,92 @@
+<div class="p-8">
+  <div class="flex items-center justify-between mb-6">
+    <div>
+      <h2 class="text-2xl font-bold text-gray-900">FOI Requests</h2>
+      <p class="text-sm text-gray-500 mt-1">{{ requests().length }} request(s) logged</p>
+    </div>
+    <a
+      routerLink="/app/foi/new"
+      class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+    >
+      + Submit FOI Request
+    </a>
+  </div>
+
+  <div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+    @if (requests().length === 0) {
+      <div class="py-16 text-center text-sm text-gray-400">
+        No FOI requests yet.
+        <a routerLink="/app/foi/new" class="text-blue-600 hover:underline ml-1"
+          >Submit the first one.</a
+        >
+      </div>
+    } @else {
+      <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+          <tr>
+            <th
+              class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide"
+            >
+              Tracking #
+            </th>
+            <th
+              class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide"
+            >
+              Requester
+            </th>
+            <th
+              class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide"
+            >
+              Status
+            </th>
+            <th
+              class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide"
+            >
+              Due Date
+            </th>
+            <th
+              class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide"
+            >
+              Submitted
+            </th>
+          </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-100">
+          @for (r of requests(); track r.requestId) {
+            <tr class="hover:bg-gray-50 transition-colors">
+              <td class="px-5 py-3">
+                <a
+                  [routerLink]="['/app/foi', r.requestId]"
+                  class="text-sm font-mono font-semibold text-blue-600 hover:underline"
+                  >{{ r.trackingNumber }}</a
+                >
+              </td>
+              <td class="px-5 py-3">
+                <p class="text-sm text-gray-900">{{ r.requester?.name }}</p>
+                <p class="text-xs text-gray-400">{{ format(r.requester?.type ?? '') }}</p>
+              </td>
+              <td class="px-5 py-3">
+                <span
+                  class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                  [class]="getStatusBadgeClass(r.status)"
+                >
+                  {{ format(r.status) }}
+                </span>
+              </td>
+              <td
+                class="px-5 py-3 text-sm"
+                [class]="isOverdue(r.dueDateAt) ? 'text-red-600 font-medium' : 'text-gray-500'"
+              >
+                {{ formatDate(r.dueDateAt) }}
+                @if (isOverdue(r.dueDateAt)) {
+                  <span class="text-xs ml-1">(Overdue)</span>
+                }
+              </td>
+              <td class="px-5 py-3 text-sm text-gray-500">{{ formatDate(r.submittedAt) }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  </div>
+</div>

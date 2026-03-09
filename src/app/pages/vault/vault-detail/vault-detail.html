@@ -1,0 +1,103 @@
+<div class="p-8">
+  @if (!entry()) {
+    <div class="flex items-center justify-center h-64 text-gray-400 text-sm">
+      Loading vault entry…
+    </div>
+  } @else {
+    <div class="mb-6">
+      <a routerLink="/app/vault" class="text-sm text-blue-600 hover:underline">← Back to Vault</a>
+    </div>
+
+    <div class="flex items-start justify-between mb-6">
+      <div>
+        <h2 class="text-2xl font-bold text-gray-900">{{ entry()!.name }}</h2>
+        <p class="text-sm text-gray-500 mt-1">
+          Year: {{ entry()!.year }} · Batch #{{ entry()!.batchNumber }}
+        </p>
+      </div>
+      @if (entry()!.sealedAt) {
+        <span class="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-semibold"
+          >Sealed</span
+        >
+      } @else {
+        <span class="px-3 py-1 bg-green-50 text-green-700 rounded-full text-xs font-semibold"
+          >Active</span
+        >
+      }
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <!-- Retention Details -->
+      <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+        <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4">
+          Retention Details
+        </h3>
+        <dl class="space-y-3">
+          <div>
+            <dt class="text-xs text-gray-500">Classification</dt>
+            <dd class="mt-0.5">
+              <span
+                class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                [class]="getClassificationBadge(entry()!.retentionClassification)"
+              >
+                {{ format(entry()!.retentionClassification) }}
+              </span>
+            </dd>
+          </div>
+          <div>
+            <dt class="text-xs text-gray-500">Retention Start</dt>
+            <dd class="text-sm text-gray-900 mt-0.5">
+              {{ formatDate(entry()!.retentionStartDate) }}
+            </dd>
+          </div>
+          <div>
+            <dt class="text-xs text-gray-500">Retain Until</dt>
+            <dd class="text-sm mt-0.5 font-medium">
+              @if (entry()!.retentionUntil) {
+                <span class="text-gray-900">{{ formatDate(entry()!.retentionUntil) }}</span>
+              } @else {
+                <span class="text-purple-700">Permanent — Do Not Dispose</span>
+              }
+            </dd>
+          </div>
+          <div>
+            <dt class="text-xs text-gray-500">Category</dt>
+            <dd class="text-sm text-gray-900 mt-0.5">{{ format(entry()!.category) }}</dd>
+          </div>
+          <div>
+            <dt class="text-xs text-gray-500">Archived At</dt>
+            <dd class="text-sm text-gray-900 mt-0.5">{{ formatDate(entry()!.createdAt) }}</dd>
+          </div>
+          @if (entry()!.sealedAt) {
+            <div>
+              <dt class="text-xs text-gray-500">Sealed At</dt>
+              <dd class="text-sm text-gray-900 mt-0.5">{{ formatDate(entry()!.sealedAt) }}</dd>
+            </div>
+          }
+        </dl>
+      </div>
+
+      <!-- Documents in this Vault -->
+      <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+        <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4">
+          Documents ({{ entry()!.documentIds.length }})
+        </h3>
+        @if (entry()!.documentIds.length === 0) {
+          <p class="text-sm text-gray-400">No documents in this vault entry.</p>
+        } @else {
+          <ul class="space-y-2">
+            @for (docId of entry()!.documentIds; track docId) {
+              <li>
+                <a
+                  [routerLink]="['/app/documents', docId]"
+                  class="text-sm text-blue-600 hover:underline font-mono"
+                  >{{ docId }}</a
+                >
+              </li>
+            }
+          </ul>
+        }
+      </div>
+    </div>
+  }
+</div>

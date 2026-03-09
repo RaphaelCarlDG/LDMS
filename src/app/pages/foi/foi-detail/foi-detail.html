@@ -1,0 +1,153 @@
+<div class="p-8">
+  @if (!request()) {
+    <div class="flex items-center justify-center h-64 text-gray-400 text-sm">Loading request…</div>
+  } @else {
+    <div class="mb-4">
+      <a routerLink="/app/foi" class="text-sm text-blue-600 hover:underline"
+        >← Back to FOI Requests</a
+      >
+    </div>
+
+    <!-- Header -->
+    <div class="flex items-start justify-between mb-6">
+      <div>
+        <div class="flex items-center gap-3 mb-1">
+          <span class="font-mono text-lg font-bold text-gray-900">{{
+            request()!.trackingNumber
+          }}</span>
+          <span
+            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+            [class]="{
+              'bg-gray-100 text-gray-600': request()!.status === 'submitted',
+              'bg-blue-100 text-blue-700':
+                request()!.status === 'acknowledged' || request()!.status === 'processing',
+              'bg-indigo-100 text-indigo-700': request()!.status === 'ready_for_release',
+              'bg-green-100 text-green-700': request()!.status === 'released',
+              'bg-red-100 text-red-700': request()!.status === 'denied',
+            }"
+          >
+            {{ format(request()!.status) }}
+          </span>
+          @if (isOverdue()) {
+            <span class="text-xs text-red-600 font-medium">⚠ Overdue</span>
+          }
+        </div>
+        <p class="text-sm text-gray-500">
+          Submitted {{ formatDate(request()!.submittedAt) }} · Due
+          {{ formatDate(request()!.dueDateAt) }}
+        </p>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex items-center gap-2">
+        @if (nextAction()) {
+          <button
+            [class]="getBtnClass(nextAction()!.style)"
+            [disabled]="advancing()"
+            (click)="advance()"
+          >
+            {{ advancing() ? '…' : nextAction()!.label }}
+          </button>
+        }
+        @if (!['released', 'denied', 'partially_released'].includes(request()!.status)) {
+          <button
+            (click)="deny()"
+            [disabled]="advancing()"
+            class="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-50 transition-colors"
+          >
+            Deny
+          </button>
+        }
+      </div>
+    </div>
+
+    <!-- Progress Timeline -->
+    <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-6 mb-6">
+      <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-4">Progress</h3>
+      <div class="flex items-center gap-1">
+        @for (step of steps; track step.status; let last = $last) {
+          <div class="flex items-center">
+            <div class="flex flex-col items-center">
+              <div
+                class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold"
+                [class]="{
+                  'bg-green-600 text-white': currentStepIndex() > $index,
+                  'bg-blue-600 text-white ring-4 ring-blue-100': currentStepIndex() === $index,
+                  'bg-gray-200 text-gray-400': currentStepIndex() < $index,
+                }"
+              >
+                {{ currentStepIndex() > $index ? '✓' : $index + 1 }}
+              </div>
+              <span class="text-xs text-gray-500 mt-1 whitespace-nowrap">{{ step.label }}</span>
+            </div>
+            @if (!last) {
+              <div
+                class="w-12 h-0.5 mb-5 mx-1"
+                [class]="currentStepIndex() > $index ? 'bg-green-400' : 'bg-gray-200'"
+              ></div>
+            }
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Details Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <!-- Requester Info -->
+      <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+        <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4">Requester</h3>
+        <dl class="space-y-2">
+          <div>
+            <dt class="text-xs text-gray-500">Name</dt>
+            <dd class="text-sm text-gray-900">{{ request()!.requester?.name }}</dd>
+          </div>
+          <div>
+            <dt class="text-xs text-gray-500">Email</dt>
+            <dd class="text-sm text-gray-900">{{ request()!.requester?.email }}</dd>
+          </div>
+          @if (request()!.requester?.phone) {
+            <div>
+              <dt class="text-xs text-gray-500">Phone</dt>
+              <dd class="text-sm text-gray-900">{{ request()!.requester?.phone }}</dd>
+            </div>
+          }
+          @if (request()!.requester?.organization) {
+            <div>
+              <dt class="text-xs text-gray-500">Organization</dt>
+              <dd class="text-sm text-gray-900">{{ request()!.requester?.organization }}</dd>
+            </div>
+          }
+          <div>
+            <dt class="text-xs text-gray-500">Type</dt>
+            <dd class="text-sm text-gray-900">{{ format(request()!.requester?.type ?? '') }}</dd>
+          </div>
+        </dl>
+      </div>
+
+      <!-- Request Details -->
+      <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+        <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4">
+          Request Details
+        </h3>
+        <dl class="space-y-3">
+          <div>
+            <dt class="text-xs text-gray-500">Purpose</dt>
+            <dd class="text-sm text-gray-900 mt-0.5 leading-relaxed">{{ request()!.purpose }}</dd>
+          </div>
+          @if (request()!.searchQuery) {
+            <div>
+              <dt class="text-xs text-gray-500">Search Query</dt>
+              <dd class="text-sm text-gray-900 mt-0.5">{{ request()!.searchQuery }}</dd>
+            </div>
+          }
+          @if (request()!.denialReason) {
+            <div>
+              <dt class="text-xs text-red-500">Denial Reason</dt>
+              <dd class="text-sm text-red-700 mt-0.5">{{ request()!.denialReason }}</dd>
+            </div>
+          }
+        </dl>
+      </div>
+    </div>
+  }
+</div>

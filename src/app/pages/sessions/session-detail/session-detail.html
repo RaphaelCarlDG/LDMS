@@ -1,0 +1,254 @@
+<div class="p-8">
+  @if (!session()) {
+    <div class="flex items-center justify-center h-64 text-gray-400 text-sm">Loading session…</div>
+  } @else {
+    <div class="mb-4">
+      <a routerLink="/app/sessions" class="text-sm text-blue-600 hover:underline"
+        >← Back to Sessions</a
+      >
+    </div>
+
+    <!-- Header -->
+    <div class="flex items-start justify-between mb-6">
+      <div>
+        <h2 class="text-2xl font-bold text-gray-900">{{ session()!.title }}</h2>
+        <p class="text-sm text-gray-500 mt-1">
+          {{ format(session()!.type) }} · {{ formatDate(session()!.scheduledAt) }}
+        </p>
+      </div>
+      <div class="flex items-center gap-2">
+        <span
+          class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium"
+          [class]="{
+            'bg-blue-100 text-blue-700': session()!.status === 'scheduled',
+            'bg-green-100 text-green-700': session()!.status === 'ongoing',
+            'bg-gray-100 text-gray-600': session()!.status === 'completed',
+            'bg-red-100 text-red-700': session()!.status === 'cancelled',
+          }"
+        >
+          {{ format(session()!.status) }}
+        </span>
+        @if (userService.canUpdateSession() && session()!.status === 'scheduled') {
+          <button
+            (click)="updateStatus('ongoing')"
+            class="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
+          >
+            Start Session
+          </button>
+        }
+        @if (userService.canUpdateSession() && session()!.status === 'ongoing') {
+          <button
+            (click)="updateStatus('completed')"
+            class="px-4 py-2 bg-gray-600 text-white rounded-lg text-sm font-medium hover:bg-gray-700 transition-colors"
+          >
+            End Session
+          </button>
+          <button
+            (click)="updateStatus('adjourned')"
+            class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm hover:bg-gray-50 transition-colors"
+          >
+            Adjourn
+          </button>
+        }
+      </div>
+    </div>
+
+    <!-- Agenda Items -->
+    <div class="bg-white rounded-lg border border-gray-200 shadow-sm">
+      <div class="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
+        <h3 class="text-sm font-semibold text-gray-900">
+          Agenda Items ({{ agendaItems().length }})
+        </h3>
+        @if (userService.canUpdateSession()) {
+          <button
+            (click)="showAgendaForm.set(!showAgendaForm())"
+            class="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-700 transition-colors"
+          >
+            + Add Item
+          </button>
+        }
+      </div>
+
+      @if (userService.canUpdateSession() && showAgendaForm()) {
+        <form
+          [formGroup]="agendaForm"
+          (ngSubmit)="addAgendaItem()"
+          class="px-5 py-4 border-b border-gray-100 space-y-3"
+        >
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1"
+                >Document <span class="text-red-500">*</span></label
+              >
+              <select
+                formControlName="documentId"
+                class="block w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Select document</option>
+                @for (d of allDocuments(); track d.documentId) {
+                  <option [value]="d.documentId">{{ d.title | slice: 0 : 60 }}</option>
+                }
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1">Reading Type</label>
+              <select
+                formControlName="type"
+                class="block w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="first_reading">1st Reading</option>
+                <option value="second_reading">2nd Reading</option>
+                <option value="third_reading">3rd Reading</option>
+                <option value="committee_report">Committee Report</option>
+                <option value="motion">Motion</option>
+                <option value="announcement">Announcement</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Presenter</label>
+            <input
+              formControlName="presenter"
+              type="text"
+              class="block w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div class="flex gap-2">
+            <button
+              type="submit"
+              [disabled]="submitting()"
+              class="px-3 py-1.5 bg-blue-600 text-white rounded-md text-xs font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
+            >
+              Add
+            </button>
+            <button
+              type="button"
+              (click)="showAgendaForm.set(false)"
+              class="px-3 py-1.5 border border-gray-300 text-gray-600 rounded-md text-xs hover:bg-gray-50 transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      }
+
+      @if (agendaItems().length === 0) {
+        <p class="px-5 py-8 text-center text-sm text-gray-400">No agenda items yet.</p>
+      } @else {
+        <div class="divide-y divide-gray-100">
+          @for (item of agendaItems(); track item.itemId) {
+            <div class="px-5 py-4">
+              <div class="flex items-center justify-between gap-4">
+                <div class="min-w-0">
+                  <div class="flex items-center gap-2 mb-1">
+                    <span class="text-xs text-gray-400 font-mono">#{{ item.order }}</span>
+                    <span class="text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">{{
+                      format(item.type)
+                    }}</span>
+                  </div>
+                  <p class="text-sm font-medium text-gray-900 truncate">{{ item.documentTitle }}</p>
+                  @if (item.presenterName) {
+                    <p class="text-xs text-gray-500 mt-0.5">Presenter: {{ item.presenterName }}</p>
+                  }
+                </div>
+                <div class="flex items-center gap-2 flex-shrink-0">
+                  <span
+                    class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
+                    [class]="getStatusBadgeClass(item.status)"
+                  >
+                    {{ format(item.status) }}
+                  </span>
+                  @if (
+                    userService.canUpdateSession() &&
+                    item.status !== 'voted' &&
+                    item.status !== 'withdrawn'
+                  ) {
+                    <button
+                      (click)="votingItemId.set(item.itemId!)"
+                      class="px-2.5 py-1 bg-indigo-600 text-white rounded text-xs font-medium hover:bg-indigo-700 transition-colors"
+                    >
+                      Vote
+                    </button>
+                  }
+                </div>
+              </div>
+
+              <!-- Vote Result -->
+              @if (item.voteResult) {
+                <div class="mt-3 flex items-center gap-4 text-xs">
+                  <span class="text-green-600 font-medium"
+                    >✓ {{ item.voteResult.inFavor }} in favor</span
+                  >
+                  <span class="text-red-600 font-medium"
+                    >✗ {{ item.voteResult.against }} against</span
+                  >
+                  <span class="text-gray-500">{{ item.voteResult.abstain }} abstain</span>
+                  <span
+                    class="font-semibold capitalize"
+                    [class]="{
+                      'text-green-700': item.voteResult.outcome === 'passed',
+                      'text-red-700': item.voteResult.outcome === 'failed',
+                      'text-gray-600': item.voteResult.outcome === 'deferred',
+                    }"
+                  >
+                    → {{ item.voteResult.outcome }}
+                  </span>
+                </div>
+              }
+
+              <!-- Vote Form -->
+              @if (userService.canUpdateSession() && votingItemId() === item.itemId) {
+                <form
+                  [formGroup]="voteForm"
+                  (ngSubmit)="recordVote(item.itemId!)"
+                  class="mt-3 flex items-end gap-3 p-3 bg-indigo-50 rounded-lg"
+                >
+                  <div>
+                    <label class="block text-xs text-indigo-700 mb-1">In Favor</label>
+                    <input
+                      formControlName="inFavor"
+                      type="number"
+                      min="0"
+                      class="w-16 rounded border border-indigo-200 px-2 py-1 text-sm text-center focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-xs text-red-600 mb-1">Against</label>
+                    <input
+                      formControlName="against"
+                      type="number"
+                      min="0"
+                      class="w-16 rounded border border-red-200 px-2 py-1 text-sm text-center focus:outline-none focus:ring-2 focus:ring-red-400"
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-xs text-gray-500 mb-1">Abstain</label>
+                    <input
+                      formControlName="abstain"
+                      type="number"
+                      min="0"
+                      class="w-16 rounded border border-gray-300 px-2 py-1 text-sm text-center focus:outline-none focus:ring-2 focus:ring-gray-400"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    class="px-3 py-1.5 bg-indigo-600 text-white rounded text-xs font-medium hover:bg-indigo-700 transition-colors"
+                  >
+                    Record
+                  </button>
+                  <button
+                    type="button"
+                    (click)="votingItemId.set(null)"
+                    class="px-3 py-1.5 border border-gray-300 text-gray-600 rounded text-xs hover:bg-gray-50 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </form>
+              }
+            </div>
+          }
+        </div>
+      }
+    </div>
+  }
+</div>

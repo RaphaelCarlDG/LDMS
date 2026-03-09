@@ -1,0 +1,11 @@
+lib/
+node_modules/
+*.local
+
+# Secret files — never commit
+.env
+.env.*
+*.env
+serviceAccountKey.json
+firebase-adminsdk-*.json
+*-service-account.json
