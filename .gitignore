@@ -43,8 +43,7 @@ __screenshots__/
 .DS_Store
 Thumbs.db
 
-# Firebase environment files — contain live API keys, never commit
-src/environments/environment.ts
+# Firebase environment overrides — staging/prod may contain server-side keys
 src/environments/environment.prod.ts
 src/environments/environment.development.ts
 src/environments/environment.staging.ts
