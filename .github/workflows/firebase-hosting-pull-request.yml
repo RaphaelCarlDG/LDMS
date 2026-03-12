@@ -13,7 +13,37 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: npm ci && npm run build
+      - run: npm ci
+      - name: Generate environment files
+        run: |
+          mkdir -p src/environments
+          cat > src/environments/environment.ts << 'ENVEOF'
+          export const environment = {
+            production: false,
+            useEmulators: false,
+            emulators: { authHost: '', authPort: 0, firestoreHost: '', firestorePort: 0, functionsHost: '', functionsPort: 0, storageHost: '', storagePort: 0 },
+            firebase: { apiKey: '', authDomain: '', projectId: '', storageBucket: '', messagingSenderId: '', appId: '', measurementId: '' }
+          };
+          ENVEOF
+
+          cat > src/environments/environment.prod.ts << ENVEOF
+          import { Environment } from './environment.model';
+          export const environment: Environment = {
+            production: true,
+            useEmulators: false,
+            emulators: { authHost: '', authPort: 0, firestoreHost: '', firestorePort: 0, functionsHost: '', functionsPort: 0, storageHost: '', storagePort: 0 },
+            firebase: {
+              apiKey: '${{ secrets.FIREBASE_API_KEY }}',
+              authDomain: '${{ secrets.FIREBASE_AUTH_DOMAIN }}',
+              projectId: '${{ secrets.FIREBASE_PROJECT_ID }}',
+              storageBucket: '${{ secrets.FIREBASE_STORAGE_BUCKET }}',
+              messagingSenderId: '${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}',
+              appId: '${{ secrets.FIREBASE_APP_ID }}',
+              measurementId: '${{ secrets.FIREBASE_MEASUREMENT_ID }}'
+            }
+          };
+          ENVEOF
+      - run: npm run build
       - uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
